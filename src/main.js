@@ -8,25 +8,38 @@ const decryption = require('./decrypt')
 const Jsto = () => {}
 
 Jsto.saveJSON = (path, obj, password) => {
-    let dataStr = JSON.stringify(obj)
-    dataStr = beautify(dataStr, {
-        indent_size: 4
-    })
-    const dataStream = new Readable()
-    dataStream.push(dataStr)
-    dataStream.push(null)
-    const writeStream = fs.createWriteStream(path)
-    if (password === undefined || password === false) {
-        dataStream.on('data', (chunk) => {
-            writeStream.write(chunk)
+    return new Promise(resolve => {
+        let dataStr = JSON.stringify(obj)
+        dataStr = beautify(dataStr, {
+            indent_size: 4
         })
-    } else {
-
-        let encryptedStream = encrypt(dataStream, password)
-        encryptedStream
-            .on('unpipe', () => {})
-            .pipe(writeStream)
-    }
+        const dataStream = new Readable()
+        dataStream.push(dataStr)
+        dataStream.push(null)
+        const writeStream = fs.createWriteStream(path)
+        if (password === undefined || password === false) {
+            dataStream.on('data', (chunk) => {
+                writeStream.write(chunk)
+                writeStream.end()
+                writeStream.on('finish', ()=>{
+                    console.log('write finished')
+                    resolve("what ever")
+                })
+                writeStream.on('end', ()=>{
+                    console.log('write end')
+                    // resolve()
+                })
+            })
+        } else {
+            let encryptedStream = encrypt(dataStream, password)
+            encryptedStream
+                .on('unpipe', () => {})
+                .pipe(writeStream)
+                .on('unpipe', ()=>{
+                    resolve()
+                })
+        }
+    })
 
 }
 
@@ -46,13 +59,15 @@ Jsto.loadJSON = (path, password) => {
 
             let decryptedStream
             readInitVector.on('close', () => {
+                let dataStr = ''
                 decryptedStream = decryption.decrypt(path, initVector, password)
                 decryptedStream
                     // .on('unpipe', () => {})
                     .on('data', (chunk) => {
-                        let dataStr = chunk.toString('utf8')
+                        dataStr = dataStr + chunk.toString('utf8')
+                    })
+                    .on('close', ()=>{
                         let dataObj = {}
-                        console.log(`result:${dataStr}`)
                         try {
                             dataObj = JSON.parse(dataStr)
                         } catch (err) {
