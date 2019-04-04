@@ -16,58 +16,78 @@ var decryption = require('./decrypt');
 var Jsto = function Jsto() {};
 
 Jsto.saveJSON = function (path, obj, password) {
-    var dataStr = JSON.stringify(obj);
-    dataStr = (0, _jsBeautify2.default)(dataStr, {
-        indent_size: 4
-    });
-    var dataStream = new Readable();
-    dataStream.push(dataStr);
-    dataStream.push(null);
-    var writeStream = fs.createWriteStream(path);
-    if (password === undefined || password === false) {
-        dataStream.on('data', function (chunk) {
-            writeStream.write(chunk);
+    return new Promise(function (resolve) {
+        var dataStr = JSON.stringify(obj);
+        dataStr = (0, _jsBeautify2.default)(dataStr, {
+            indent_size: 4
         });
-    } else {
-
-        var encryptedStream = encrypt(dataStream, password);
-        encryptedStream.on('unpipe', function () {}).pipe(writeStream);
-    }
+        var dataStream = new Readable();
+        dataStream.push(dataStr);
+        dataStream.push(null);
+        var writeStream = fs.createWriteStream(path);
+        if (password === undefined || password === false) {
+            dataStream.on('data', function (chunk) {
+                writeStream.write(chunk);
+                writeStream.end();
+                writeStream.on('finish', function () {
+                    resolve("what ever");
+                });
+                writeStream.on('end', function () {
+                    // resolve()
+                });
+            });
+        } else {
+            var encryptedStream = encrypt(dataStream, password);
+            encryptedStream.on('unpipe', function () {}).pipe(writeStream).on('unpipe', function () {
+                resolve();
+            });
+        }
+    });
 };
 
 Jsto.loadJSON = function (path, password) {
-    if (password === undefined || password === false) {
-        var readStream = fs.createReadStream(path);
-        var writeStream = fs.createWriteStream(path);
+    return new Promise(function (resolve) {
+        if (password === undefined || password === false) {
+            var readStream = fs.createReadStream(path);
+            var dataStr = '';
+            readStream.on('data', function (chunk) {
+                dataStr = dataStr + chunk.toString('utf8');
+            }).on('close', function () {
+                var dataObj = {};
+                try {
+                    dataObj = JSON.parse(dataStr);
+                } catch (err) {
+                    //
+                }
+                resolve(dataObj);
+            });
+        } else {
+            var initVector = void 0;
+            var readInitVector = decryption.getInitVectorStream(path);
+            readInitVector.on('data', function (chunk) {
+                initVector = chunk;
 
-        readStream.on('data', function (chunk) {
-            writeStream.write(chunk);
-        });
-    } else {
-        var initVector = void 0;
-        var readInitVector = decryption.getInitVectorStream(path);
-        readInitVector.on('data', function (chunk) {
-            initVector = chunk;
-
-            var decryptedStream = void 0;
-            readInitVector.on('close', function () {
-                decryptedStream = decryption.decrypt(path, initVector, password);
-                decryptedStream
-                // .on('unpipe', () => {})
-                .on('data', function (chunk) {
-                    var dataStr = chunk.toString('utf8');
-                    var dataObj = {};
-                    console.log('result:' + dataStr);
-                    try {
-                        dataObj = JSON.parse(dataStr);
-                    } catch (err) {
-                        //
-                    }
-                    return dataObj;
+                var decryptedStream = void 0;
+                readInitVector.on('close', function () {
+                    var dataStr = '';
+                    decryptedStream = decryption.decrypt(path, initVector, password);
+                    decryptedStream
+                    // .on('unpipe', () => {})
+                    .on('data', function (chunk) {
+                        dataStr = dataStr + chunk.toString('utf8');
+                    }).on('close', function () {
+                        var dataObj = {};
+                        try {
+                            dataObj = JSON.parse(dataStr);
+                        } catch (err) {
+                            //
+                        }
+                        resolve(dataObj);
+                    });
                 });
             });
-        });
-    }
+        }
+    });
 };
 
 module.exports = Jsto;

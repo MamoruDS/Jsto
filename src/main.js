@@ -21,12 +21,10 @@ Jsto.saveJSON = (path, obj, password) => {
             dataStream.on('data', (chunk) => {
                 writeStream.write(chunk)
                 writeStream.end()
-                writeStream.on('finish', ()=>{
-                    console.log('write finished')
+                writeStream.on('finish', () => {
                     resolve("what ever")
                 })
-                writeStream.on('end', ()=>{
-                    console.log('write end')
+                writeStream.on('end', () => {
                     // resolve()
                 })
             })
@@ -35,7 +33,7 @@ Jsto.saveJSON = (path, obj, password) => {
             encryptedStream
                 .on('unpipe', () => {})
                 .pipe(writeStream)
-                .on('unpipe', ()=>{
+                .on('unpipe', () => {
                     resolve()
                 })
         }
@@ -44,40 +42,51 @@ Jsto.saveJSON = (path, obj, password) => {
 }
 
 Jsto.loadJSON = (path, password) => {
-    if (password === undefined || password === false) {
-        const readStream = fs.createReadStream(path)
-        const writeStream = fs.createWriteStream(path)
+    return new Promise(resolve => {
+        if (password === undefined || password === false) {
+            const readStream = fs.createReadStream(path)
+            let dataStr = ''
+            readStream
+                .on('data', (chunk) => {
+                    dataStr = dataStr + chunk.toString('utf8')
+                })
+                .on('close', () => {
+                    let dataObj = {}
+                    try {
+                        dataObj = JSON.parse(dataStr)
+                    } catch (err) {
+                        //
+                    }
+                    resolve(dataObj)
+                })
+        } else {
+            let initVector
+            let readInitVector = decryption.getInitVectorStream(path)
+            readInitVector.on('data', (chunk) => {
+                initVector = chunk
 
-        readStream.on('data', (chunk) => {
-            writeStream.write(chunk)
-        })
-    } else {
-        let initVector
-        let readInitVector = decryption.getInitVectorStream(path)
-        readInitVector.on('data', (chunk) => {
-            initVector = chunk
-
-            let decryptedStream
-            readInitVector.on('close', () => {
-                let dataStr = ''
-                decryptedStream = decryption.decrypt(path, initVector, password)
-                decryptedStream
-                    // .on('unpipe', () => {})
-                    .on('data', (chunk) => {
-                        dataStr = dataStr + chunk.toString('utf8')
-                    })
-                    .on('close', ()=>{
-                        let dataObj = {}
-                        try {
-                            dataObj = JSON.parse(dataStr)
-                        } catch (err) {
-                            //
-                        }
-                        return dataObj
-                    })
+                let decryptedStream
+                readInitVector.on('close', () => {
+                    let dataStr = ''
+                    decryptedStream = decryption.decrypt(path, initVector, password)
+                    decryptedStream
+                        // .on('unpipe', () => {})
+                        .on('data', (chunk) => {
+                            dataStr = dataStr + chunk.toString('utf8')
+                        })
+                        .on('close', () => {
+                            let dataObj = {}
+                            try {
+                                dataObj = JSON.parse(dataStr)
+                            } catch (err) {
+                                //
+                            }
+                            resolve(dataObj)
+                        })
+                })
             })
-        })
-    }
+        }
+    })
 }
 
 module.exports = Jsto
