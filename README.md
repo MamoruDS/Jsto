@@ -10,11 +10,11 @@ npm i jsto
 
 ## Usage
 ```javascript
-const Jsto = require('jsto')
+import jsto  from './main'
 
-Jsto.saveJSON('./staff.sto', [{"name":"John", "age":"34"}, {"name":"Gaston", "age":"28"}], 'passwd')
+await Jsto.saveJSON('./staff.sto', [{"name":"John", "age":"34"}, {"name":"Gaston", "age":"28"}], 'passwd')
 
-Jsto.loadJSON('./staff.sto', 'passwd')
+await Jsto.loadJSON('./staff.sto', 'passwd')
 ```
 
 ## License
