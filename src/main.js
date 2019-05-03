@@ -1,9 +1,8 @@
-const fs = require('fs')
-const Readable = require('stream').Readable
+import fs from 'fs'
+import { Readable } from 'stream'
 import beautify from 'js-beautify'
-
-const encrypt = require('./encrypt')
-const decryption = require('./decrypt')
+import { encrypt } from './encrypt'
+import { decryption } from './decrypt'
 
 const Jsto = () => {}
 
@@ -11,18 +10,18 @@ Jsto.saveJSON = (path, obj, password) => {
     return new Promise(resolve => {
         let dataStr = JSON.stringify(obj)
         dataStr = beautify(dataStr, {
-            indent_size: 4
+            indent_size: 4,
         })
         const dataStream = new Readable()
         dataStream.push(dataStr)
         dataStream.push(null)
         const writeStream = fs.createWriteStream(path)
         if (password === undefined || password === false) {
-            dataStream.on('data', (chunk) => {
+            dataStream.on('data', chunk => {
                 writeStream.write(chunk)
                 writeStream.end()
                 writeStream.on('finish', () => {
-                    resolve("what ever")
+                    resolve('what ever')
                 })
                 writeStream.on('end', () => {
                     // resolve()
@@ -38,7 +37,6 @@ Jsto.saveJSON = (path, obj, password) => {
                 })
         }
     })
-
 }
 
 Jsto.loadJSON = (path, password) => {
@@ -47,7 +45,7 @@ Jsto.loadJSON = (path, password) => {
             const readStream = fs.createReadStream(path)
             let dataStr = ''
             readStream
-                .on('data', (chunk) => {
+                .on('data', chunk => {
                     dataStr = dataStr + chunk.toString('utf8')
                 })
                 .on('close', () => {
@@ -62,16 +60,20 @@ Jsto.loadJSON = (path, password) => {
         } else {
             let initVector
             let readInitVector = decryption.getInitVectorStream(path)
-            readInitVector.on('data', (chunk) => {
+            readInitVector.on('data', chunk => {
                 initVector = chunk
 
                 let decryptedStream
                 readInitVector.on('close', () => {
                     let dataStr = ''
-                    decryptedStream = decryption.decrypt(path, initVector, password)
+                    decryptedStream = decryption.decrypt(
+                        path,
+                        initVector,
+                        password
+                    )
                     decryptedStream
                         // .on('unpipe', () => {})
-                        .on('data', (chunk) => {
+                        .on('data', chunk => {
                             dataStr = dataStr + chunk.toString('utf8')
                         })
                         .on('close', () => {
@@ -89,4 +91,4 @@ Jsto.loadJSON = (path, password) => {
     })
 }
 
-module.exports = Jsto
+export default Jsto

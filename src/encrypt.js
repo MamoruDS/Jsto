@@ -1,9 +1,8 @@
-const crypto = require('crypto')
-const zlib = require('zlib')
+import crypto from 'crypto'
+import zlib from 'zlib'
+
 const gzipStream = zlib.createGzip()
-const {
-    Transform
-} = require('stream')
+import { Transform } from 'stream'
 
 class AppendInitVect extends Transform {
     constructor(initVect, opts) {
@@ -22,8 +21,11 @@ class AppendInitVect extends Transform {
     }
 }
 
-const getCipherKey = (password) => {
-    return crypto.createHash('sha256').update(password).digest()
+const getCipherKey = password => {
+    return crypto
+        .createHash('sha256')
+        .update(password)
+        .digest()
 }
 
 const encrypt = (contentStream, password) => {
@@ -37,4 +39,4 @@ const encrypt = (contentStream, password) => {
         .pipe(appendInitVect)
 }
 
-module.exports = encrypt
+export { encrypt }
