@@ -1,30 +1,44 @@
-'use strict';
+"use strict";
 
-var fs = require('fs');
-var zlib = require('zlib');
-var crypto = require('crypto');
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.decryption = void 0;
+
+var _fs = _interopRequireDefault(require("fs"));
+
+var _zlib = _interopRequireDefault(require("zlib"));
+
+var _crypto = _interopRequireDefault(require("crypto"));
 
 var decryption = function decryption() {};
 
+exports.decryption = decryption;
+
 var getCipherKey = function getCipherKey(password) {
-    return crypto.createHash('sha256').update(password).digest();
+  return _crypto["default"].createHash('sha256').update(password).digest();
 };
 
 decryption.getInitVectorStream = function (path) {
-    var readInitVector = fs.createReadStream(path, {
-        end: 15
-    });
-    return readInitVector;
+  var readInitVector = _fs["default"].createReadStream(path, {
+    end: 15
+  });
+
+  return readInitVector;
 };
 
 decryption.decrypt = function (path, initVector, password) {
-    var cipherKey = getCipherKey(password);
-    var readStream = fs.createReadStream(path, {
-        start: 16
-    });
-    var decipher = crypto.createDecipheriv('aes256', cipherKey, initVector);
-    var unzip = zlib.createUnzip();
-    return readStream.pipe(decipher).pipe(unzip);
-};
+  var cipherKey = getCipherKey(password);
 
-module.exports = decryption;
+  var readStream = _fs["default"].createReadStream(path, {
+    start: 16
+  });
+
+  var decipher = _crypto["default"].createDecipheriv('aes256', cipherKey, initVector);
+
+  var unzip = _zlib["default"].createUnzip();
+
+  return readStream.pipe(decipher).pipe(unzip);
+};
