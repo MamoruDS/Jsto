@@ -51,51 +51,61 @@ Jsto.saveJSON = function (path, obj, password) {
 };
 
 Jsto.loadJSON = function (path, password) {
-  return new Promise(function (resolve) {
-    if (password === undefined || password === false) {
-      var readStream = _fs["default"].createReadStream(path);
+  var touchFile = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
 
-      var dataStr = '';
-      readStream.on('data', function (chunk) {
-        dataStr = dataStr + chunk.toString('utf8');
-      }).on('close', function () {
-        var dataObj = {};
+  if (!_fs["default"].existsSync(path)) {
+    if (touchFile) {
+      Jsto.saveJSON(path, {}, password);
+    }
 
-        try {
-          dataObj = JSON.parse(dataStr);
-        } catch (err) {//
-        }
+    return {};
+  } else {
+    return new Promise(function (resolve) {
+      if (password === undefined || password === false) {
+        var readStream = _fs["default"].createReadStream(path);
 
-        resolve(dataObj);
-      });
-    } else {
-      var initVector;
+        var dataStr = '';
+        readStream.on('data', function (chunk) {
+          dataStr = dataStr + chunk.toString('utf8');
+        }).on('close', function () {
+          var dataObj = {};
 
-      var readInitVector = _decrypt.decryption.getInitVectorStream(path);
+          try {
+            dataObj = JSON.parse(dataStr);
+          } catch (err) {//
+          }
 
-      readInitVector.on('data', function (chunk) {
-        initVector = chunk;
-        var decryptedStream;
-        readInitVector.on('close', function () {
-          var dataStr = '';
-          decryptedStream = _decrypt.decryption.decrypt(path, initVector, password);
-          decryptedStream // .on('unpipe', () => {})
-          .on('data', function (chunk) {
-            dataStr = dataStr + chunk.toString('utf8');
-          }).on('close', function () {
-            var dataObj = {};
+          resolve(dataObj);
+        });
+      } else {
+        var initVector;
 
-            try {
-              dataObj = JSON.parse(dataStr);
-            } catch (err) {//
-            }
+        var readInitVector = _decrypt.decryption.getInitVectorStream(path);
 
-            resolve(dataObj);
+        readInitVector.on('data', function (chunk) {
+          initVector = chunk;
+          var decryptedStream;
+          readInitVector.on('close', function () {
+            var dataStr = '';
+            decryptedStream = _decrypt.decryption.decrypt(path, initVector, password);
+            decryptedStream // .on('unpipe', () => {})
+            .on('data', function (chunk) {
+              dataStr = dataStr + chunk.toString('utf8');
+            }).on('close', function () {
+              var dataObj = {};
+
+              try {
+                dataObj = JSON.parse(dataStr);
+              } catch (err) {//
+              }
+
+              resolve(dataObj);
+            });
           });
         });
-      });
-    }
-  });
+      }
+    });
+  }
 };
 
 var _default = Jsto;

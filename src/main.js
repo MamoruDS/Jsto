@@ -39,56 +39,63 @@ Jsto.saveJSON = (path, obj, password) => {
     })
 }
 
-Jsto.loadJSON = (path, password) => {
-    return new Promise(resolve => {
-        if (password === undefined || password === false) {
-            const readStream = fs.createReadStream(path)
-            let dataStr = ''
-            readStream
-                .on('data', chunk => {
-                    dataStr = dataStr + chunk.toString('utf8')
-                })
-                .on('close', () => {
-                    let dataObj = {}
-                    try {
-                        dataObj = JSON.parse(dataStr)
-                    } catch (err) {
-                        //
-                    }
-                    resolve(dataObj)
-                })
-        } else {
-            let initVector
-            let readInitVector = decryption.getInitVectorStream(path)
-            readInitVector.on('data', chunk => {
-                initVector = chunk
-
-                let decryptedStream
-                readInitVector.on('close', () => {
-                    let dataStr = ''
-                    decryptedStream = decryption.decrypt(
-                        path,
-                        initVector,
-                        password
-                    )
-                    decryptedStream
-                        // .on('unpipe', () => {})
-                        .on('data', chunk => {
-                            dataStr = dataStr + chunk.toString('utf8')
-                        })
-                        .on('close', () => {
-                            let dataObj = {}
-                            try {
-                                dataObj = JSON.parse(dataStr)
-                            } catch (err) {
-                                //
-                            }
-                            resolve(dataObj)
-                        })
-                })
-            })
+Jsto.loadJSON = (path, password, touchFile = true) => {
+    if (!fs.existsSync(path)) {
+        if (touchFile) {
+            Jsto.saveJSON(path, {}, password)
         }
-    })
+        return {}
+    } else {
+        return new Promise(resolve => {
+            if (password === undefined || password === false) {
+                const readStream = fs.createReadStream(path)
+                let dataStr = ''
+                readStream
+                    .on('data', chunk => {
+                        dataStr = dataStr + chunk.toString('utf8')
+                    })
+                    .on('close', () => {
+                        let dataObj = {}
+                        try {
+                            dataObj = JSON.parse(dataStr)
+                        } catch (err) {
+                            //
+                        }
+                        resolve(dataObj)
+                    })
+            } else {
+                let initVector
+                let readInitVector = decryption.getInitVectorStream(path)
+                readInitVector.on('data', chunk => {
+                    initVector = chunk
+
+                    let decryptedStream
+                    readInitVector.on('close', () => {
+                        let dataStr = ''
+                        decryptedStream = decryption.decrypt(
+                            path,
+                            initVector,
+                            password
+                        )
+                        decryptedStream
+                            // .on('unpipe', () => {})
+                            .on('data', chunk => {
+                                dataStr = dataStr + chunk.toString('utf8')
+                            })
+                            .on('close', () => {
+                                let dataObj = {}
+                                try {
+                                    dataObj = JSON.parse(dataStr)
+                                } catch (err) {
+                                    //
+                                }
+                                resolve(dataObj)
+                            })
+                    })
+                })
+            }
+        })
+    }
 }
 
 export default Jsto
