@@ -8,19 +8,11 @@ var _asyncToGenerator2 = _interopRequireDefault(require("@babel/runtime/helpers/
 
 var _main = _interopRequireDefault(require("./main"));
 
-// const jsto = require('./main')
-// import * as jsto from './main'
-// import { jsto } from './main'
 var conf = {
-  prop_A: 's123ometext',
-  prop_B: 1423,
+  prop_A: 'sometext',
+  prop_B: 123,
   prop_C: true,
-  prop_D: [false, 23, 'asd'] // console.log(jsto)
-  // import fs from 'fs'
-  // console.log(fs)
-  // jsto.saveJSON('sample.json', conf)
-  // jsto.saveJSON('sample.sto', conf, '123')
-
+  prop_D: [false, 456, 'data']
 };
 
 var jsonRead =
@@ -52,7 +44,7 @@ function () {
   return function jsonRead(_x, _x2) {
     return _ref.apply(this, arguments);
   };
-}(); // jsonRead('sample.json')
+}(); // jsto.saveJSON('sample.sto', conf, 'pwd')
 
 
-jsonRead('sample.sto', '123');
+jsonRead('sample.sto', 'pwd');
