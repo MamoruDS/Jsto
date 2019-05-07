@@ -1,12 +1,15 @@
+import path from 'path'
 import { fork } from 'child_process'
 
 const Jsto = () => {}
 
+const childPath = path.join(__dirname, 'child.js')
+
 Jsto.saveJSON = (path, obj, password) => {
     return new Promise(resolve => {
-        const child = fork('dist/child.js')
+        const child = fork(childPath)
         child.send({ method: 'save', path: path, obj: obj, pwd: password })
-        child.on('exit', () => {
+        child.on('message', () => {
             resolve()
         })
     })
@@ -14,10 +17,10 @@ Jsto.saveJSON = (path, obj, password) => {
 
 Jsto.loadJSON = (path, password) => {
     return new Promise(resolve => {
-        const child = fork('dist/child.js')
-        child.send({ method: 'save', path: path, pwd: password })
-        child.on('exit', () => {
-            resolve()
+        const child = fork(childPath)
+        child.send({ method: 'load', path: path, pwd: password })
+        child.on('message', (msg) => {
+            resolve(msg)
         })
     })
 }
