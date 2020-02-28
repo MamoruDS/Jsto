@@ -3,7 +3,7 @@
         "module": "commonjs",
         "outDir": "dist",
         "removeComments": true,
-        "target": "ES2017",
+        "target": "es5",
         "declaration": true,
         "sourceMap": true,
     },

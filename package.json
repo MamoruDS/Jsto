@@ -4,8 +4,8 @@
     "description": "",
     "main": "dist/main.js",
     "scripts": {
-        "build": "tsc",
-        "build-watch": "tsc --watch"
+        "build": "rm -rf dist && tsc",
+        "build-watch": "rm -rf dist && tsc --watch"
     },
     "repository": {
         "type": "git",
