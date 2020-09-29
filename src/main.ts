@@ -1,25 +1,38 @@
 import * as fs from 'fs'
 import { Readable } from 'stream'
-import * as beautify from 'js-beautify'
 
 import * as encryption from './encrypt'
 import * as decryption from './decrypt'
 
-export const saveJSON = (
+const options = {
+    indent_size: 4,
+} as {
+    indent_size: number
+}
+
+const saveJSON = async (
+    filePath: string,
+    data: object,
+    password?: string
+): Promise<string> => {
+    return await dump(filePath, data, password)
+}
+
+const dump = async (
     filePath: string,
     data: object,
     password?: string
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
-        const dataStr: string = beautify(JSON.stringify(data), {
-            indent_size: 4,
-        })
+        const dataStr: string = password
+            ? JSON.stringify(data)
+            : JSON.stringify(data, null, options.indent_size)
         const dataStream: Readable = new Readable()
         dataStream.push(dataStr)
         dataStream.push(null)
         const writeStream: fs.WriteStream = fs.createWriteStream(filePath)
         if (password === undefined) {
-            dataStream.on('data', chunk => {
+            dataStream.on('data', (chunk) => {
                 writeStream.write(chunk)
                 writeStream.end()
                 writeStream.on('finish', () => {
@@ -41,7 +54,15 @@ export const saveJSON = (
     })
 }
 
-export const loadJSON = async (
+const loadJSON = async (
+    filePath: string,
+    password?: string,
+    defaultData?: object
+): Promise<object> => {
+    return await load(filePath, password, defaultData)
+}
+
+const load = async (
     filePath: string,
     password?: string,
     defaultData?: object
@@ -49,7 +70,7 @@ export const loadJSON = async (
     return new Promise(async (resolve, reject) => {
         if (!fs.existsSync(filePath)) {
             if (defaultData) {
-                await saveJSON(filePath, defaultData, password)
+                await dump(filePath, defaultData, password)
                 resolve(defaultData)
             } else {
                 reject()
@@ -61,7 +82,7 @@ export const loadJSON = async (
             const readStream: fs.ReadStream = fs.createReadStream(filePath)
             let _dataStr: string = ''
             readStream
-                .on('data', chunk => {
+                .on('data', (chunk) => {
                     _dataStr = _dataStr + chunk.toString('utf8')
                 })
                 .on('close', () => {
@@ -77,7 +98,7 @@ export const loadJSON = async (
             const readInitVector: fs.ReadStream = decryption.getInitVectorStream(
                 filePath
             )
-            readInitVector.on('data', chunk => {
+            readInitVector.on('data', (chunk) => {
                 const initVector = chunk
                 let decryptedStream
                 readInitVector.on('close', () => {
@@ -88,7 +109,7 @@ export const loadJSON = async (
                         password
                     )
                     decryptedStream
-                        .on('data', chunk => {
+                        .on('data', (chunk) => {
                             dataStr = dataStr + chunk.toString('utf8')
                             decryptedStream.close()
                         })
@@ -106,3 +127,7 @@ export const loadJSON = async (
         }
     })
 }
+
+export { saveJSON, loadJSON }
+
+export { options, dump, load }
