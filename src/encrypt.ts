@@ -1,50 +1,48 @@
-import * as crypto from 'crypto'
-import * as zlib from 'zlib'
+import { createHash, createCipheriv, createDecipheriv } from 'crypto'
 
-import { Transform, Readable } from 'stream'
+const METHOD = 'aes256'
 
-class AppendInitVect extends Transform {
-    private initVect: Buffer
-    private appended: boolean
-    constructor(initVect: Buffer, opts?) {
-        super(opts)
-        this.initVect = initVect
-        this.appended = false
-    }
-
-    public _transform(
-        chunk   : Buffer | string | any,
-        encoding: string | 'buffer',
-        cb      : () => any
-        )       : void {
-        if (!this.appended) {
-            this.push(this.initVect)
-            this.appended = true
-        }
-        this.push(chunk)
-        cb()
-    }
+const encrypt = async (text: string, password: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const key = createHash('sha256').update(password).digest()
+        const iv = Buffer.alloc(16, 0)
+        const cipher = createCipheriv(METHOD, key, iv)
+        let encrypted = ''
+        cipher.on('readable', () => {
+            let chunk: any
+            while (null !== (chunk = cipher.read())) {
+                encrypted += chunk.toString('hex')
+            }
+        })
+        cipher.on('end', () => {
+            resolve(encrypted)
+        })
+        cipher.write(text)
+        cipher.end()
+    })
 }
 
-const getCipherKey = (password: string): crypto.CipherKey => {
-    return crypto
-        .createHash('sha256')
-        .update(password)
-        .digest()
+const decrypt = async (
+    encrypted: string,
+    password: string
+): Promise<string> => {
+    return new Promise(async (resolve, reject) => {
+        const key = createHash('sha256').update(password).digest()
+        const iv = Buffer.alloc(16, 0)
+        const decipher = createDecipheriv(METHOD, key, iv)
+        let decrypted = ''
+        decipher.on('readable', () => {
+            let chunk = undefined
+            while (null !== (chunk = decipher.read())) {
+                decrypted += chunk.toString('utf8')
+            }
+        })
+        decipher.on('end', () => {
+            resolve(decrypted)
+        })
+        decipher.write(encrypted, 'hex')
+        decipher.end()
+    })
 }
 
-export const encrypt = (contentStream: Readable, password: string) => {
-    const initVector: Buffer          = crypto.randomBytes(16)
-    const cipherKey: crypto.CipherKey = getCipherKey(password)
-    const cipher: crypto.Cipher       = crypto.createCipheriv(
-        'aes256',
-        cipherKey,
-        initVector
-    )
-    const gzipStream = zlib.createGzip()
-    const appendInitVect = new AppendInitVect(initVector)
-    return contentStream
-        .pipe(gzipStream)
-        .pipe(cipher)
-        .pipe(appendInitVect)
-}
+export { encrypt, decrypt }

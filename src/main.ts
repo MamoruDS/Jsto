@@ -1,8 +1,6 @@
 import * as fs from 'fs'
-import { Readable } from 'stream'
 
-import * as encryption from './encrypt'
-import * as decryption from './decrypt'
+import { encrypt, decrypt } from './encrypt'
 
 const options = {
     indent_size: 4,
@@ -23,34 +21,12 @@ const dump = async (
     data: object,
     password?: string
 ): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const dataStr: string = password
-            ? JSON.stringify(data)
+    return new Promise(async (resolve, reject) => {
+        const out = password
+            ? await encrypt(JSON.stringify(data), password)
             : JSON.stringify(data, null, options.indent_size)
-        const dataStream: Readable = new Readable()
-        dataStream.push(dataStr)
-        dataStream.push(null)
-        const writeStream: fs.WriteStream = fs.createWriteStream(filePath)
-        if (password === undefined) {
-            dataStream.on('data', (chunk) => {
-                writeStream.write(chunk)
-                writeStream.end()
-                writeStream.on('finish', () => {
-                    resolve(dataStr)
-                })
-                writeStream.on('end', () => {
-                    // do nothing
-                })
-            })
-        } else {
-            let encryptedStream = encryption.encrypt(dataStream, password)
-            encryptedStream
-                .on('unpipe', () => {})
-                .pipe(writeStream)
-                .on('unpipe', () => {
-                    resolve(dataStr)
-                })
-        }
+        fs.writeFileSync(filePath, out, { encoding: 'utf8' })
+        resolve(out)
     })
 }
 
@@ -75,56 +51,11 @@ const load = async (
             } else {
                 reject()
             }
-            return {}
+            resolve({})
         }
 
-        if (password === undefined) {
-            const readStream: fs.ReadStream = fs.createReadStream(filePath)
-            let _dataStr: string = ''
-            readStream
-                .on('data', (chunk) => {
-                    _dataStr = _dataStr + chunk.toString('utf8')
-                })
-                .on('close', () => {
-                    let dataObj = {}
-                    try {
-                        dataObj = JSON.parse(_dataStr)
-                    } catch (err) {
-                        reject(err)
-                    }
-                    resolve(dataObj)
-                })
-        } else {
-            const readInitVector: fs.ReadStream = decryption.getInitVectorStream(
-                filePath
-            )
-            readInitVector.on('data', (chunk) => {
-                const initVector = chunk
-                let decryptedStream
-                readInitVector.on('close', () => {
-                    let dataStr = ''
-                    decryptedStream = decryption.decrypt(
-                        filePath,
-                        initVector,
-                        password
-                    )
-                    decryptedStream
-                        .on('data', (chunk) => {
-                            dataStr = dataStr + chunk.toString('utf8')
-                            decryptedStream.close()
-                        })
-                        .on('close', () => {
-                            let dataObj = {}
-                            try {
-                                dataObj = JSON.parse(dataStr)
-                            } catch (err) {
-                                reject(err)
-                            }
-                            resolve(dataObj)
-                        })
-                })
-            })
-        }
+        const text = fs.readFileSync(filePath, { encoding: 'utf8' })
+        resolve(JSON.parse(password ? await decrypt(text, password) : text))
     })
 }
 
