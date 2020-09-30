@@ -1,7 +1,6 @@
 import * as crypto from 'crypto'
 import * as zlib from 'zlib'
 
-const gzipStream = zlib.createGzip()
 import { Transform, Readable } from 'stream'
 
 class AppendInitVect extends Transform {
@@ -42,6 +41,7 @@ export const encrypt = (contentStream: Readable, password: string) => {
         cipherKey,
         initVector
     )
+    const gzipStream = zlib.createGzip()
     const appendInitVect = new AppendInitVect(initVector)
     return contentStream
         .pipe(gzipStream)
