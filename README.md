@@ -10,10 +10,12 @@ npm i jsto
 
 ## Usage
 ```javascript
-const Jsto = require('jsto')
+const jsto = require('jsto')
+
+jsto.options['indent_size'] = 2
 
 const func = async () => {
-    await Jsto.saveJSON(
+    await jsto.dump(
         './staff.sto',
         [
             { name: 'John', age: '34' },
@@ -21,7 +23,7 @@ const func = async () => {
         ],
         'passwd'
     )
-    await Jsto.loadJSON('./staff.sto', 'passwd')
+    await jsto.load('./staff.sto', 'passwd')
 }
 
 ```
